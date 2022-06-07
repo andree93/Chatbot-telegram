@@ -43,7 +43,6 @@ def send_welcome(message):
 
 
 
-
 @bot.message_handler(commands=['riavvia_ricerca'])
 def send_restart(message):
     chat_id = message.chat.id
@@ -59,7 +58,7 @@ def send_restart(message):
 
 
 
-@bot.message_handler(commands=['cambia-nome'])
+@bot.message_handler(commands=['cambia_nome'])
 def cambia_nome(message):
     chat_id = message.chat.id
     msg = bot.reply_to(message, "Inserisci un nuovo nome")
@@ -129,6 +128,7 @@ def process_placeType_step(message):
         bot.reply_to(message, 'Errore, riprova!')
 
 
+@bot.message_handler(regexp="^\d")
 def process_priceLevel_step(message):
     try:
         chat_id = message.chat.id
@@ -153,15 +153,20 @@ def process_priceLevel_step(message):
         msg = bot.reply_to(message, 'Errore!')
         bot.register_next_step_handler(msg, process_priceLevel_step)
 
+
 @bot.message_handler(content_types=["location"])
 def process_getLocation_step(message):
     try:
         chat_id = message.chat.id
-        longitude = message.location.longitude
-        latitude = message.location.latitude
         user = user_dict[chat_id]
-        user.query.latitude = latitude
-        user.query.longitude = longitude
+        position = message.location
+        if position is not None:
+            longitude = position.longitude
+            latitude = position.latitude
+            user.query.latitude = latitude
+            user.query.longitude = longitude
+
+        
 
         #bot.send_message(chat_id, 'Questi sono i risultati, --- ')
         user_dict[chat_id].query.places = DAO(getNearbyPlacesSync(lat=user.query.latitude, lon=user.query.longitude, placeType=user.query.placeType ))
@@ -196,10 +201,9 @@ def process_getLocation_step(message):
 @bot.message_handler(regexp="^Cod-\d\d")
 def send_location(message):
     chat_id = message.chat.id
-    message_tmp = message.text
 
-    if len(message_tmp)>0:
-        if message_tmp == "/riavvia_ricerca":
+    if len(message.text)>0:
+        if message.text == "/riavvia_ricerca":
             markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
             markup.row_width = 2
             markup.add(InlineKeyboardButton("tutto", callback_data="restaurant|bar|food"),
@@ -209,25 +213,17 @@ def send_location(message):
             bot.register_next_step_handler(msg, process_placeType_step)
         else:
             try:
-                id_location_requested = int(re.search("\d+", message_tmp).group(0))
-                if len(user_dict[chat_id].query.places) < 1:
-                    bot.send_message(chat_id,
-                                     "Errore, non hai completato i passi precedenti o non sono stati trovati risultati. Riprova!",
-                                     reply_markup=ReplyKeyboardRemove())
-
-                if ((id_location_requested < 1) or (id_location_requested > 20)):
-                    msg = bot.send_message(chat_id,
-                                           "Errore, il codice non risulta valido. Riprova!",
-                                           )
+                id_location_requested = int(re.search("\d+", message.text).group(0))
+                if ((id_location_requested >= 1) and (id_location_requested <= len(user_dict[chat_id].query.places))):
+                    bot.send_location(chat_id, user_dict[chat_id].query.places[id_location_requested - 1].lat, user_dict[chat_id].query.places[id_location_requested - 1].long)
+                    msg = bot.send_message(chat_id, "Puoi raggiungere la località richiesta cliccando sulla posizione\nOppure puoi richiederne un'altra dalla tastiera, o riavviare la ricerca con il comando /riavvia_ricerca")
                     bot.register_next_step_handler(msg, send_location)
                 else:
-                    bot.send_location(chat_id, user_dict[chat_id].query.places[id_location_requested - 1].lat,
-                                      user_dict[chat_id].query.places[id_location_requested - 1].long)
-                    msg = bot.send_message(chat_id,
-                                           "Puoi raggiungere la località richiesta cliccando sulla posizione\nOppure puoi richiederne un'altra dalla tastiera, o riavviare la ricerca con il comando /riavvia_ricerca")
+                    msg = bot.send_message(chat_id, "Errore, il codice inviato non risulta valido. Riprova!")
+                    bot.register_next_step_handler(msg, send_location)
             except:
                 msg = bot.send_message(chat_id,
-                                       "Errore, il codice non risulta valido. Riprova!")
+                                       "Errore, Input non valido. Riprova!")
                 bot.register_next_step_handler(msg, send_location)
     else:
         bot.send_message(chat_id, "Errore, input non valido!")
@@ -240,7 +236,6 @@ def cambia_nome(message):
     msg = bot.reply_to(message, "Inserisci un nuovo nome")
     bot.register_next_step_handler(msg, process_name_step)
 
-
 # Enable saving next step handlers to file "./.handlers-saves/step.save".
 # Delay=2 means that after any change in next step handlers (e.g. calling register_next_step_handler())
 # saving will hapen after delay 2 seconds.
@@ -249,6 +244,5 @@ def cambia_nome(message):
 # Load next_step_handlers from save file (default "./.handlers-saves/step.save")
 # WARNING It will work only if enable_save_next_step_handlers was called!
 #bot.load_next_step_handlers()
-
 
 bot.infinity_polling()
