@@ -47,14 +47,13 @@ def send_welcome(message):
 def send_restart(message):
     chat_id = message.chat.id
     rep = "Quale tipo di attività stai cercando?"
-    step = process_placeType_step
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
     markup.row_width = 2
     markup.add(InlineKeyboardButton("tutto", callback_data="restaurant|bar|food"),
                 InlineKeyboardButton("ristorante", callback_data="restaurant"),
                 InlineKeyboardButton("cibo", callback_data="food"))
     msg = bot.reply_to(message, rep, reply_markup=markup)
-    bot.register_next_step_handler(msg, step)
+    bot.register_next_step_handler(msg, process_placeType_step)
 
 
 
@@ -69,8 +68,8 @@ def cambia_nome(message):
 def process_name_step(message):
     try:
         chat_id = message.chat.id
-        if chat_id not in user_dict.keys():
-            name = message.text
+        name = message.text
+        if chat_id not in user_dict.keys() or user_dict[chat_id].name != name:
             if name.startswith("/"):
                 msg = bot.reply_to(message, "Errore, riscrivi il tuo nome per favore!")
                 bot.register_next_step_handler(msg, process_name_step)
