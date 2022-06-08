@@ -6,7 +6,7 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from models import Query, Place, User
 from services import getUrlRequest, DAO, getNearbyPlacesAsync, getNearbyPlacesSync
 
-API_TOKEN = "5516917413:AAEsm2SgnOs1UuSSpkeg2PpGZiMSC9rgAJ8"
+API_TOKEN = ""
 # -*- coding: utf-8 -*-
 """
 This Example will show you how to use register_next_step handler.
